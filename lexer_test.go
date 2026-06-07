@@ -113,7 +113,7 @@ func TestLexer(t *testing.T) {
 	})
 
 	t.Run("combination", func(t *testing.T) {
-		t.Run("should return tokens for basic expression", func(t *testing.T) {
+		t.Run("should return tokens for a single condition", func(t *testing.T) {
 			lexer := logen.NewLexer("fieldA=\"valueA\"")
 			expected := []logen.Token{
 				{Type: logen.TokenTypeField, Value: "fieldA"},
@@ -127,7 +127,7 @@ func TestLexer(t *testing.T) {
 			assert.Equal(t, expected, actual)
 		})
 
-		t.Run("should return tokens for basic expression where each token seperated by white space", func(t *testing.T) {
+		t.Run("should return tokens for a single condition where each token seperated by white space", func(t *testing.T) {
 			lexer := logen.NewLexer("fieldA = \"valueA\"")
 			expected := []logen.Token{
 				{Type: logen.TokenTypeField, Value: "fieldA"},
@@ -141,7 +141,7 @@ func TestLexer(t *testing.T) {
 			assert.Equal(t, expected, actual)
 		})
 
-		t.Run("should return tokens with multiple conditions", func(t *testing.T) {
+		t.Run("should return tokens for multiple conditions", func(t *testing.T) {
 			lexer := logen.NewLexer("fieldA=\"valueA\" AND fieldB=\"valueB\" OR fieldC=\"valueC\"")
 			expected := []logen.Token{
 				{Type: logen.TokenTypeField, Value: "fieldA"},
