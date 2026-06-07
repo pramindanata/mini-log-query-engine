@@ -84,6 +84,34 @@ func TestLexer(t *testing.T) {
 		})
 	})
 
+	t.Run("single type: AND", func(t *testing.T) {
+		t.Run("should return tokens with correct AND token", func(t *testing.T) {
+			lexer := logen.NewLexer("AND")
+			expected := []logen.Token{
+				{Type: logen.TokenTypeAND, Value: "AND"},
+				{Type: logen.TokenTypeEOF, Value: ""},
+			}
+
+			actual := collectTokens(t, lexer)
+
+			assert.Equal(t, expected, actual)
+		})
+	})
+
+	t.Run("single type: OR", func(t *testing.T) {
+		t.Run("should return tokens with correct OR token", func(t *testing.T) {
+			lexer := logen.NewLexer("OR")
+			expected := []logen.Token{
+				{Type: logen.TokenTypeOR, Value: "OR"},
+				{Type: logen.TokenTypeEOF, Value: ""},
+			}
+
+			actual := collectTokens(t, lexer)
+
+			assert.Equal(t, expected, actual)
+		})
+	})
+
 	t.Run("combination", func(t *testing.T) {
 		t.Run("should return tokens for basic expression", func(t *testing.T) {
 			lexer := logen.NewLexer("fieldA=\"valueA\"")
@@ -105,6 +133,28 @@ func TestLexer(t *testing.T) {
 				{Type: logen.TokenTypeField, Value: "fieldA"},
 				{Type: logen.TokenTypeOperator, Value: "="},
 				{Type: logen.TokenTypeValue, Value: "valueA"},
+				{Type: logen.TokenTypeEOF, Value: ""},
+			}
+
+			actual := collectTokens(t, lexer)
+
+			assert.Equal(t, expected, actual)
+		})
+
+		t.Run("should return tokens with multiple conditions", func(t *testing.T) {
+			lexer := logen.NewLexer("fieldA=\"valueA\" AND fieldB=\"valueB\" OR fieldC=\"valueC\"")
+			expected := []logen.Token{
+				{Type: logen.TokenTypeField, Value: "fieldA"},
+				{Type: logen.TokenTypeOperator, Value: "="},
+				{Type: logen.TokenTypeValue, Value: "valueA"},
+				{Type: logen.TokenTypeAND, Value: "AND"},
+				{Type: logen.TokenTypeField, Value: "fieldB"},
+				{Type: logen.TokenTypeOperator, Value: "="},
+				{Type: logen.TokenTypeValue, Value: "valueB"},
+				{Type: logen.TokenTypeOR, Value: "OR"},
+				{Type: logen.TokenTypeField, Value: "fieldC"},
+				{Type: logen.TokenTypeOperator, Value: "="},
+				{Type: logen.TokenTypeValue, Value: "valueC"},
 				{Type: logen.TokenTypeEOF, Value: ""},
 			}
 

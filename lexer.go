@@ -15,11 +15,11 @@ func NewLexer(text string) *Lexer {
 }
 
 func (l *Lexer) GetNextToken() (Token, error) {
-	if l.pos >= len(l.text) {
+	if l.isDone() {
 		return Token{Type: TokenTypeEOF}, nil
 	}
 
-	l.removeWhiteScape()
+	l.skipWhiteSpace()
 
 	char := l.text[l.pos]
 
@@ -41,10 +41,10 @@ func (l *Lexer) GetNextToken() (Token, error) {
 
 		return token, nil
 	case l.isEnglishAlphabet(char):
-		token, err := l.readField()
+		token, err := l.readLetter()
 
 		if err != nil {
-			return token, fmt.Errorf("failed to read field: %w", err)
+			return token, fmt.Errorf("failed to read letter: %w", err)
 		}
 
 		return token, nil
@@ -53,7 +53,7 @@ func (l *Lexer) GetNextToken() (Token, error) {
 	return Token{}, fmt.Errorf("failed to get next token: invalid char at pos %d", l.pos)
 }
 
-func (l *Lexer) removeWhiteScape() {
+func (l *Lexer) skipWhiteSpace() {
 	for l.text[l.pos] == ' ' {
 		l.pos++
 		continue
@@ -64,7 +64,7 @@ func (l *Lexer) readQuotedValue() (Token, error) {
 	started := false
 	var value strings.Builder
 
-	for l.pos < len(l.text) {
+	for !l.isDone() {
 		char := l.text[l.pos]
 
 		if !started && char == '"' {
@@ -103,14 +103,14 @@ func (l *Lexer) readOperator() (Token, error) {
 	return token, nil
 }
 
-func (l *Lexer) readField() (Token, error) {
-	var value strings.Builder
+func (l *Lexer) readLetter() (Token, error) {
+	var builder strings.Builder
 
-	for l.pos < len(l.text) {
+	for !l.isDone() {
 		char := l.text[l.pos]
 
 		if l.isEnglishAlphabet(char) {
-			value.WriteByte(char)
+			builder.WriteByte(char)
 			l.pos++
 			continue
 		}
@@ -118,14 +118,33 @@ func (l *Lexer) readField() (Token, error) {
 		break
 	}
 
-	return Token{
+	value := builder.String()
+	token := Token{
 		Type:  TokenTypeField,
-		Value: value.String(),
-	}, nil
+		Value: value,
+	}
+
+	if strings.ToLower(value) == "and" {
+		token = Token{
+			Type:  TokenTypeAND,
+			Value: "AND",
+		}
+	} else if strings.ToLower(value) == "or" {
+		token = Token{
+			Type:  TokenTypeOR,
+			Value: "OR",
+		}
+	}
+
+	return token, nil
 }
 
 func (l *Lexer) isEnglishAlphabet(b byte) bool {
 	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
+}
+
+func (l *Lexer) isDone() bool {
+	return l.pos >= len(l.text)
 }
 
 type Token struct {
@@ -138,4 +157,6 @@ const (
 	TokenTypeField    = "FIELD"
 	TokenTypeOperator = "OPERATOR"
 	TokenTypeValue    = "VALUE"
+	TokenTypeAND      = "AND"
+	TokenTypeOR       = "OR"
 )
