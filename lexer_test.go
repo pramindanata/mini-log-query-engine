@@ -84,6 +84,36 @@ func TestLexer(t *testing.T) {
 		})
 	})
 
+	t.Run("combination", func(t *testing.T) {
+		t.Run("should return tokens for basic expression", func(t *testing.T) {
+			lexer := logen.NewLexer("fieldA=\"valueA\"")
+			expected := []logen.Token{
+				{Type: logen.TokenTypeField, Value: "fieldA"},
+				{Type: logen.TokenTypeOperator, Value: "="},
+				{Type: logen.TokenTypeValue, Value: "valueA"},
+				{Type: logen.TokenTypeEOF, Value: ""},
+			}
+
+			actual := collectTokens(t, lexer)
+
+			assert.Equal(t, expected, actual)
+		})
+
+		t.Run("should return tokens for basic expression where each token seperated by white space", func(t *testing.T) {
+			lexer := logen.NewLexer("fieldA = \"valueA\"")
+			expected := []logen.Token{
+				{Type: logen.TokenTypeField, Value: "fieldA"},
+				{Type: logen.TokenTypeOperator, Value: "="},
+				{Type: logen.TokenTypeValue, Value: "valueA"},
+				{Type: logen.TokenTypeEOF, Value: ""},
+			}
+
+			actual := collectTokens(t, lexer)
+
+			assert.Equal(t, expected, actual)
+		})
+	})
+
 	t.Run("invalid char position error", func(t *testing.T) {
 		type testTable struct {
 			text string
