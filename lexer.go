@@ -23,8 +23,8 @@ func (l *Lexer) GetNextToken() (Token, error) {
 
 	char := l.text[l.pos]
 
-	switch char {
-	case '"':
+	switch {
+	case char == '"':
 		token, err := l.readQuotedValue()
 
 		if err != nil {
@@ -32,7 +32,7 @@ func (l *Lexer) GetNextToken() (Token, error) {
 		}
 
 		return token, nil
-	case '=':
+	case char == '=':
 		token, err := l.readOperator()
 
 		if err != nil {
@@ -40,9 +40,17 @@ func (l *Lexer) GetNextToken() (Token, error) {
 		}
 
 		return token, nil
+	case l.isEnglishAlphabet(char):
+		token, err := l.readField()
+
+		if err != nil {
+			return token, fmt.Errorf("failed to read field: %w", err)
+		}
+
+		return token, nil
 	}
 
-	return Token{}, nil
+	return Token{}, fmt.Errorf("failed to get next token: invalid char at pos %d", l.pos)
 }
 
 func (l *Lexer) removeWhiteScape() {
@@ -93,6 +101,31 @@ func (l *Lexer) readOperator() (Token, error) {
 	}
 
 	return token, nil
+}
+
+func (l *Lexer) readField() (Token, error) {
+	var value strings.Builder
+
+	for l.pos < len(l.text) {
+		char := l.text[l.pos]
+
+		if l.isEnglishAlphabet(char) {
+			value.WriteByte(char)
+			l.pos++
+			continue
+		}
+
+		break
+	}
+
+	return Token{
+		Type:  TokenTypeField,
+		Value: value.String(),
+	}, nil
+}
+
+func (l *Lexer) isEnglishAlphabet(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
 }
 
 type Token struct {

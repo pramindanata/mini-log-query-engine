@@ -1,6 +1,7 @@
 package logen_test
 
 import (
+	"fmt"
 	"logen"
 	"testing"
 
@@ -54,6 +55,64 @@ func TestLexer(t *testing.T) {
 
 			assert.Equal(t, expected, actual)
 		})
+	})
+
+	t.Run("single type: field", func(t *testing.T) {
+		t.Run("should return tokens with correct field", func(t *testing.T) {
+			lexer := logen.NewLexer("fieldA")
+			expected := []logen.Token{
+				{Type: logen.TokenTypeField, Value: "fieldA"},
+				{Type: logen.TokenTypeEOF, Value: ""},
+			}
+
+			actual := collectTokens(t, lexer)
+
+			assert.Equal(t, expected, actual)
+		})
+
+		t.Run("should return tokens with multiple correct fields", func(t *testing.T) {
+			lexer := logen.NewLexer("fieldA fieldB")
+			expected := []logen.Token{
+				{Type: logen.TokenTypeField, Value: "fieldA"},
+				{Type: logen.TokenTypeField, Value: "fieldB"},
+				{Type: logen.TokenTypeEOF, Value: ""},
+			}
+
+			actual := collectTokens(t, lexer)
+
+			assert.Equal(t, expected, actual)
+		})
+	})
+
+	t.Run("invalid char position error", func(t *testing.T) {
+		type testTable struct {
+			text string
+			pos  int
+		}
+
+		table := []testTable{
+			{text: "123Field", pos: 0},
+			{text: "123\"Field\"", pos: 0},
+			{text: "Field123", pos: 5},
+		}
+
+		for _, row := range table {
+			t.Run(fmt.Sprintf("should return error at pos %d for %s", row.pos, row.text), func(t *testing.T) {
+				lexer := logen.NewLexer(row.text)
+				maxIteration := 10
+				var err error
+
+				for range maxIteration {
+					_, err = lexer.GetNextToken()
+
+					if err != nil {
+						break
+					}
+				}
+
+				assert.EqualError(t, err, fmt.Sprintf("failed to get next token: invalid char at pos %d", row.pos))
+			})
+		}
 	})
 }
 
