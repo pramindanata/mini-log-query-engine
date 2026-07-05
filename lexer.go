@@ -126,12 +126,12 @@ func (l *Lexer) readLetter() (Token, error) {
 
 	if strings.ToLower(value) == "and" {
 		token = Token{
-			Type:  TokenTypeAND,
+			Type:  TokenTypeLogicalOperator,
 			Value: "AND",
 		}
 	} else if strings.ToLower(value) == "or" {
 		token = Token{
-			Type:  TokenTypeOR,
+			Type:  TokenTypeLogicalOperator,
 			Value: "OR",
 		}
 	}
@@ -153,10 +153,9 @@ type Token struct {
 }
 
 const (
-	TokenTypeEOF      = "EOF"
-	TokenTypeField    = "FIELD"
-	TokenTypeOperator = "OPERATOR"
-	TokenTypeValue    = "VALUE"
-	TokenTypeAND      = "AND"
-	TokenTypeOR       = "OR"
+	TokenTypeEOF             = "EOF"
+	TokenTypeField           = "FIELD"
+	TokenTypeOperator        = "OPERATOR"
+	TokenTypeValue           = "VALUE"
+	TokenTypeLogicalOperator = "LOGICAL_OPERATOR"
 )

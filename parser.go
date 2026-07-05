@@ -1,6 +1,9 @@
 package logen
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // Grammar (v1)
 // (TODO) query -> expression sort
@@ -17,29 +20,43 @@ func NewParser(tokens []Token) *Parser {
 	return &Parser{tokens, 0}
 }
 
-func (p *Parser) Parse() (ASTNode[ASTNodeValueCondition], error) {
-	return p.parseCondition()
+func (p *Parser) Parse() (ASTNodeQuery, error) {
+	return p.parseQuery()
 }
 
-// func (p *Parser) parseExpression() (ASTNode[any], error) {
-// 	var result ASTNode[any]
+func (p *Parser) parseQuery() (ASTNodeQuery, error) {
+	var result ASTNodeQuery
+	filters := make([]ASTNodeFilter, 0)
 
-// 	condition, err := p.parseCondition()
+	for {
+		filter, err := p.parseFilter()
 
-// 	if err != nil {
-// 		return result, fmt.Errorf("failed to parse condition: %w", err)
-// 	}
+		if err != nil {
+			return result, fmt.Errorf("failed to get filter: %w", err)
+		}
 
-// 	result.Type = ASTNodeTypeBinary
-// 	result.Value = ASTNodeValueBinary[ASTNodeValueCondition, any]{
-// 		Left: condition,
-// 	}
+		filters = append(filters, filter)
+		_, err = p.parseLogicalOperator()
 
-// 	return result, nil
-// }
+		if err != nil {
+			if errors.Is(err, ErrEOF) {
+				break
+			}
 
-func (p *Parser) parseCondition() (ASTNode[ASTNodeValueCondition], error) {
-	var result ASTNode[ASTNodeValueCondition]
+			return result, fmt.Errorf("failed to get logical operator: %w", err)
+		}
+	}
+
+	result.Filter = ASTNodeMultiple[ASTNodeFilter]{
+		Type:  ASTTypeAnd,
+		Items: filters,
+	}
+
+	return result, nil
+}
+
+func (p *Parser) parseFilter() (ASTNodeFilter, error) {
+	var result ASTNodeFilter
 	field, err := p.parseField()
 
 	if err != nil {
@@ -58,8 +75,8 @@ func (p *Parser) parseCondition() (ASTNode[ASTNodeValueCondition], error) {
 		return result, fmt.Errorf("failed to get value: %w", err)
 	}
 
-	result.Type = ASTNodeTypeCondition
-	result.Value = ASTNodeValueCondition{
+	result = ASTNodeFilter{
+		Type:     ASTTypeFilter,
 		Field:    field.Value,
 		Operator: operator.Value,
 		Value:    value.Value,
@@ -98,15 +115,25 @@ func (p *Parser) parseValue() (Token, error) {
 	return result, nil
 }
 
+func (p *Parser) parseLogicalOperator() (Token, error) {
+	result, err := p.consume(TokenTypeLogicalOperator)
+
+	if err != nil {
+		return result, fmt.Errorf("failed to consume logical operator: %w", err)
+	}
+
+	return result, nil
+}
+
 func (p *Parser) consume(expectedTokenType string) (Token, error) {
 	if p.pos >= len(p.tokens) {
-		return Token{}, fmt.Errorf("EOF")
+		return Token{}, ErrEOF
 	}
 
 	token := p.tokens[p.pos]
 
 	if token.Type != expectedTokenType {
-		return token, fmt.Errorf("expected token type %s got %s instead at pos %d", expectedTokenType, token.Type, p.pos)
+		return token, fmt.Errorf("expected token type %s got `%s` (%s) instead at pos %d", expectedTokenType, token.Value, token.Type, p.pos)
 	}
 
 	p.pos++
@@ -114,23 +141,36 @@ func (p *Parser) consume(expectedTokenType string) (Token, error) {
 	return token, nil
 }
 
-type ASTNode[T any] struct {
+type ASTNodeQuery struct {
+	Filter ASTNodeMultiple[ASTNodeFilter]
+	Sort   ASTNodeMultiple[ASTNodeSort]
+}
+
+type ASTNodeMultiple[T any] struct {
 	Type  string
-	Value T
+	Items []T
 }
 
-type ASTNodeValueBinary[L any, R any] struct {
-	Left  ASTNode[L]
-	Right *ASTNode[R]
-}
-
-type ASTNodeValueCondition struct {
+type ASTNodeFilter struct {
+	Type     string
 	Field    string
 	Operator string
 	Value    string
 }
 
+type ASTNodeSort struct {
+	Type      string
+	Field     string
+	Direction string
+}
+
 const (
-	ASTNodeTypeBinary    = "Binary"
-	ASTNodeTypeCondition = "Condition"
+	ASTTypeAnd    = "AND"
+	ASTTypeOr     = "OR"
+	ASTTypeFilter = "CONDITION"
+	ASTTypeSort   = "SORT"
+)
+
+var (
+	ErrEOF = errors.New("EOF")
 )

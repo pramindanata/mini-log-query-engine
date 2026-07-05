@@ -88,7 +88,7 @@ func TestLexer(t *testing.T) {
 		t.Run("should return tokens with correct AND token", func(t *testing.T) {
 			lexer := logen.NewLexer("AND")
 			expected := []logen.Token{
-				{Type: logen.TokenTypeAND, Value: "AND"},
+				{Type: logen.TokenTypeLogicalOperator, Value: "AND"},
 				{Type: logen.TokenTypeEOF, Value: ""},
 			}
 
@@ -102,7 +102,7 @@ func TestLexer(t *testing.T) {
 		t.Run("should return tokens with correct OR token", func(t *testing.T) {
 			lexer := logen.NewLexer("OR")
 			expected := []logen.Token{
-				{Type: logen.TokenTypeOR, Value: "OR"},
+				{Type: logen.TokenTypeLogicalOperator, Value: "OR"},
 				{Type: logen.TokenTypeEOF, Value: ""},
 			}
 
@@ -147,11 +147,11 @@ func TestLexer(t *testing.T) {
 				{Type: logen.TokenTypeField, Value: "fieldA"},
 				{Type: logen.TokenTypeOperator, Value: "="},
 				{Type: logen.TokenTypeValue, Value: "valueA"},
-				{Type: logen.TokenTypeAND, Value: "AND"},
+				{Type: logen.TokenTypeLogicalOperator, Value: "AND"},
 				{Type: logen.TokenTypeField, Value: "fieldB"},
 				{Type: logen.TokenTypeOperator, Value: "="},
 				{Type: logen.TokenTypeValue, Value: "valueB"},
-				{Type: logen.TokenTypeOR, Value: "OR"},
+				{Type: logen.TokenTypeLogicalOperator, Value: "OR"},
 				{Type: logen.TokenTypeField, Value: "fieldC"},
 				{Type: logen.TokenTypeOperator, Value: "="},
 				{Type: logen.TokenTypeValue, Value: "valueC"},
