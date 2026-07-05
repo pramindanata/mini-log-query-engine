@@ -26,25 +26,45 @@ func (p *Parser) Parse() (ASTNodeQuery, error) {
 
 func (p *Parser) parseQuery() (ASTNodeQuery, error) {
 	var result ASTNodeQuery
+	sortTokenFound := false
+	logicalOperatorTokenFound := false
 	filters := make([]ASTNodeFilter, 0)
 
 	for {
-		filter, err := p.parseFilter()
+		filter, err := p.parseFilterClause()
 
 		if err != nil {
-			return result, fmt.Errorf("failed to get filter: %w", err)
+			if errors.Is(err, ErrEOF) && logicalOperatorTokenFound {
+				return result, fmt.Errorf("expected a filter after logical operator, got EOF instead")
+			} else if !errors.Is(err, ErrEOF) {
+				return result, fmt.Errorf("failed to get filter clause: %w", err)
+			}
+
+			break
 		}
 
 		filters = append(filters, filter)
-		_, err = p.parseLogicalOperator()
+		nextToken := p.peek()
 
-		if err != nil {
-			if errors.Is(err, ErrEOF) {
-				break
+		if nextToken.Type == TokenTypeEOF {
+			break
+		} else if nextToken.Type == TokenTypeSort {
+			sortTokenFound = true
+			break
+		} else if nextToken.Type == TokenTypeLogicalOperator {
+			// TODO handle AND/OR grouping
+			_, err = p.parseLogicalOperator()
+
+			if err != nil {
+				return result, fmt.Errorf("failed to get logical operator: %w", err)
 			}
 
-			return result, fmt.Errorf("failed to get logical operator: %w", err)
+			logicalOperatorTokenFound = true
+
+			continue
 		}
+
+		return result, fmt.Errorf("unexpected token `%s` (%s) at post %d", nextToken.Value, nextToken.Type, p.pos)
 	}
 
 	result.Filter = ASTNodeMultiple[ASTNodeFilter]{
@@ -52,10 +72,20 @@ func (p *Parser) parseQuery() (ASTNodeQuery, error) {
 		Items: filters,
 	}
 
+	if sortTokenFound {
+		sort, err := p.parseSortClause()
+
+		if err != nil {
+			return result, fmt.Errorf("failed to get sort clause: %w", err)
+		}
+
+		result.Sort = sort
+	}
+
 	return result, nil
 }
 
-func (p *Parser) parseFilter() (ASTNodeFilter, error) {
+func (p *Parser) parseFilterClause() (ASTNodeFilter, error) {
 	var result ASTNodeFilter
 	field, err := p.parseField()
 
@@ -81,6 +111,34 @@ func (p *Parser) parseFilter() (ASTNodeFilter, error) {
 		Operator: operator.Value,
 		Value:    value.Value,
 	}
+
+	return result, nil
+}
+
+func (p *Parser) parseSortClause() (ASTNodeSort, error) {
+	var result ASTNodeSort
+
+	_, err := p.parseSort()
+
+	if err != nil {
+		return result, fmt.Errorf("failed to get sort: %w", err)
+	}
+
+	field, err := p.parseField()
+
+	if err != nil {
+		return result, fmt.Errorf("failed to get field: %w", err)
+	}
+
+	direction, err := p.parseSortDirection()
+
+	if err != nil {
+		return result, fmt.Errorf("failed to get sort direction: %w", err)
+	}
+
+	result.Type = ASTTypeSort
+	result.Field = field.Value
+	result.Direction = direction.Value
 
 	return result, nil
 }
@@ -125,6 +183,26 @@ func (p *Parser) parseLogicalOperator() (Token, error) {
 	return result, nil
 }
 
+func (p *Parser) parseSort() (Token, error) {
+	result, err := p.consume(TokenTypeSort)
+
+	if err != nil {
+		return result, fmt.Errorf("failed to consume sort: %w", err)
+	}
+
+	return result, nil
+}
+
+func (p *Parser) parseSortDirection() (Token, error) {
+	result, err := p.consume(TokenTypeSortDirection)
+
+	if err != nil {
+		return result, fmt.Errorf("failed to consume sort direction: %w", err)
+	}
+
+	return result, nil
+}
+
 func (p *Parser) consume(expectedTokenType string) (Token, error) {
 	token := p.tokens[p.pos]
 
@@ -139,6 +217,12 @@ func (p *Parser) consume(expectedTokenType string) (Token, error) {
 	p.pos++
 
 	return token, nil
+}
+
+func (p *Parser) peek() Token {
+	token := p.tokens[p.pos]
+
+	return token
 }
 
 type ASTNodeQuery struct {
