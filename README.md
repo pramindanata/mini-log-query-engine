@@ -8,11 +8,12 @@ This project is a mini log query engine implemented in Golang. It allows you to 
 
 - [x] Implement basic equal match operation
 - [x] Implement sorting
+- [ ] Make CLI less painful to use (allow user to move cursor to the left)
 - [ ] Implement OR conditions
-- [ ] Implement contains match operation
+- [ ] Implement multiple conditions with AND/OR
 - [ ] Implement equal match by timestamp field
 - [ ] Implement gte & lte match by timestamp field
-- [ ] Implement multiple conditions with AND/OR
+- [ ] Implement contains match operation
 - [ ] Implement `stats` command
 
 ## Usage
