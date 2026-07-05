@@ -134,6 +134,21 @@ func (l *Lexer) readLetter() (Token, error) {
 			Type:  TokenTypeLogicalOperator,
 			Value: "OR",
 		}
+	} else if strings.ToLower(value) == "sort" {
+		token = Token{
+			Type:  TokenTypeSort,
+			Value: "SORT",
+		}
+	} else if strings.ToLower(value) == "asc" {
+		token = Token{
+			Type:  TokenTypeSortDirection,
+			Value: "ASC",
+		}
+	} else if strings.ToLower(value) == "desc" {
+		token = Token{
+			Type:  TokenTypeSortDirection,
+			Value: "DESC",
+		}
 	}
 
 	return token, nil
@@ -158,4 +173,6 @@ const (
 	TokenTypeOperator        = "OPERATOR"
 	TokenTypeValue           = "VALUE"
 	TokenTypeLogicalOperator = "LOGICAL_OPERATOR"
+	TokenTypeSort            = "SORT"
+	TokenTypeSortDirection   = "SORT_DIRECTION"
 )

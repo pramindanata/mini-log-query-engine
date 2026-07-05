@@ -6,10 +6,10 @@ import (
 )
 
 // Grammar (v1)
-// (TODO) query -> expression sort
+// query -> expression sort
 // expression -> condition (AND|OR condition)*
 // condition -> field operator value
-// (TODO) sort -> SORT field direction
+// sort -> SORT field direction
 
 type Parser struct {
 	tokens []Token
@@ -126,11 +126,11 @@ func (p *Parser) parseLogicalOperator() (Token, error) {
 }
 
 func (p *Parser) consume(expectedTokenType string) (Token, error) {
-	if p.pos >= len(p.tokens) {
+	token := p.tokens[p.pos]
+
+	if token.Type == TokenTypeEOF {
 		return Token{}, ErrEOF
 	}
-
-	token := p.tokens[p.pos]
 
 	if token.Type != expectedTokenType {
 		return token, fmt.Errorf("expected token type %s got `%s` (%s) instead at pos %d", expectedTokenType, token.Value, token.Type, p.pos)
@@ -143,7 +143,7 @@ func (p *Parser) consume(expectedTokenType string) (Token, error) {
 
 type ASTNodeQuery struct {
 	Filter ASTNodeMultiple[ASTNodeFilter]
-	Sort   ASTNodeMultiple[ASTNodeSort]
+	Sort   ASTNodeSort
 }
 
 type ASTNodeMultiple[T any] struct {

@@ -8,11 +8,12 @@ import (
 )
 
 func TestParser(t *testing.T) {
-	t.Run("should return correct AST for a single filter", func(t *testing.T) {
+	t.Run("should return correct AST for a query with single filter", func(t *testing.T) {
 		tokens := []logen.Token{
 			{Type: logen.TokenTypeField, Value: "fieldA"},
 			{Type: logen.TokenTypeOperator, Value: "="},
 			{Type: logen.TokenTypeValue, Value: "valueA"},
+			{Type: logen.TokenTypeEOF, Value: ""},
 		}
 
 		parser := logen.NewParser(tokens)
@@ -36,7 +37,7 @@ func TestParser(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("should return correct AST for a single query", func(t *testing.T) {
+	t.Run("should return correct AST for a query with multiple filters", func(t *testing.T) {
 		tokens := []logen.Token{
 			{Type: logen.TokenTypeField, Value: "fieldA"},
 			{Type: logen.TokenTypeOperator, Value: "="},
@@ -45,6 +46,11 @@ func TestParser(t *testing.T) {
 			{Type: logen.TokenTypeField, Value: "fieldB"},
 			{Type: logen.TokenTypeOperator, Value: "="},
 			{Type: logen.TokenTypeValue, Value: "valueB"},
+			{Type: logen.TokenTypeLogicalOperator, Value: "AND"},
+			{Type: logen.TokenTypeField, Value: "fieldC"},
+			{Type: logen.TokenTypeOperator, Value: "="},
+			{Type: logen.TokenTypeValue, Value: "valueC"},
+			{Type: logen.TokenTypeEOF, Value: ""},
 		}
 
 		parser := logen.NewParser(tokens)
@@ -66,6 +72,12 @@ func TestParser(t *testing.T) {
 						Operator: "=",
 						Value:    "valueB",
 					},
+					logen.ASTNodeFilter{
+						Type:     logen.ASTTypeFilter,
+						Field:    "fieldC",
+						Operator: "=",
+						Value:    "valueC",
+					},
 				},
 			},
 		}
@@ -80,6 +92,7 @@ func TestParser(t *testing.T) {
 			{Type: logen.TokenTypeOperator, Value: "="},
 			{Type: logen.TokenTypeValue, Value: "valueA"},
 			{Type: logen.TokenTypeField, Value: "invalid"},
+			{Type: logen.TokenTypeEOF, Value: ""},
 		}
 
 		parser := logen.NewParser(tokens)
@@ -94,6 +107,7 @@ func TestParser(t *testing.T) {
 			{Type: logen.TokenTypeOperator, Value: "="},
 			{Type: logen.TokenTypeValue, Value: "valueA"},
 			{Type: logen.TokenTypeLogicalOperator, Value: "AND"},
+			{Type: logen.TokenTypeEOF, Value: ""},
 		}
 
 		parser := logen.NewParser(tokens)
