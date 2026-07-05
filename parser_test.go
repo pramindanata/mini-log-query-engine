@@ -123,6 +123,33 @@ func TestParser(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
+	t.Run("should return correct AST for a query only a sort clause", func(t *testing.T) {
+		tokens := []logen.Token{
+			{Type: logen.TokenTypeSort, Value: "SORT"},
+			{Type: logen.TokenTypeField, Value: "fieldA"},
+			{Type: logen.TokenTypeSortDirection, Value: "ASC"},
+			{Type: logen.TokenTypeEOF, Value: ""},
+		}
+
+		parser := logen.NewParser(tokens)
+		actual, err := parser.Parse()
+
+		expected := logen.ASTNodeQuery{
+			Filter: logen.ASTNodeMultiple[logen.ASTNodeFilter]{
+				Type:  "AND",
+				Items: make([]logen.ASTNodeFilter, 0),
+			},
+			Sort: logen.ASTNodeSort{
+				Type:      logen.ASTTypeSort,
+				Field:     "fieldA",
+				Direction: "ASC",
+			},
+		}
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, actual)
+	})
+
 	t.Run("should return correct AST for a query with multiple filters & a sort clause", func(t *testing.T) {
 		tokens := []logen.Token{
 			{Type: logen.TokenTypeField, Value: "fieldA"},
@@ -182,7 +209,7 @@ func TestParser(t *testing.T) {
 		parser := logen.NewParser(tokens)
 		_, err := parser.Parse()
 
-		assert.EqualError(t, err, "unexpected token `invalid` (FIELD) at post 3")
+		assert.EqualError(t, err, "expected EOF or sort clause after filter clauses")
 	})
 
 	t.Run("should return error when a logical operator is not followed by anything", func(t *testing.T) {

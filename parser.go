@@ -6,7 +6,7 @@ import (
 )
 
 // Grammar (v1)
-// query -> expression sort
+// query -> expression | sort
 // expression -> condition (AND|OR condition)*
 // condition -> field operator value
 // sort -> SORT field direction
@@ -26,7 +26,21 @@ func (p *Parser) Parse() (ASTNodeQuery, error) {
 
 func (p *Parser) parseQuery() (ASTNodeQuery, error) {
 	var result ASTNodeQuery
-	sortTokenFound := false
+
+	token := p.peek()
+
+	// TODO refactor to parse sort clause once
+	// Check if only sort is exist
+	if token.Type == TokenTypeSort {
+		sort, err := p.parseSortClause()
+
+		if err != nil {
+			return result, fmt.Errorf("failed to get sort clause: %w", err)
+		}
+
+		result.Sort = sort
+	}
+
 	logicalOperatorTokenFound := false
 	filters := make([]ASTNodeFilter, 0)
 
@@ -46,12 +60,7 @@ func (p *Parser) parseQuery() (ASTNodeQuery, error) {
 		filters = append(filters, filter)
 		nextToken := p.peek()
 
-		if nextToken.Type == TokenTypeEOF {
-			break
-		} else if nextToken.Type == TokenTypeSort {
-			sortTokenFound = true
-			break
-		} else if nextToken.Type == TokenTypeLogicalOperator {
+		if nextToken.Type == TokenTypeLogicalOperator {
 			// TODO handle AND/OR grouping
 			_, err = p.parseLogicalOperator()
 
@@ -64,7 +73,7 @@ func (p *Parser) parseQuery() (ASTNodeQuery, error) {
 			continue
 		}
 
-		return result, fmt.Errorf("unexpected token `%s` (%s) at post %d", nextToken.Value, nextToken.Type, p.pos)
+		break
 	}
 
 	result.Filter = ASTNodeMultiple[ASTNodeFilter]{
@@ -72,7 +81,9 @@ func (p *Parser) parseQuery() (ASTNodeQuery, error) {
 		Items: filters,
 	}
 
-	if sortTokenFound {
+	token = p.peek()
+
+	if token.Type == TokenTypeSort {
 		sort, err := p.parseSortClause()
 
 		if err != nil {
@@ -80,6 +91,8 @@ func (p *Parser) parseQuery() (ASTNodeQuery, error) {
 		}
 
 		result.Sort = sort
+	} else if token.Type != TokenTypeEOF {
+		return result, fmt.Errorf("expected EOF or sort clause after filter clauses")
 	}
 
 	return result, nil
@@ -134,6 +147,12 @@ func (p *Parser) parseSortClause() (ASTNodeSort, error) {
 
 	if err != nil {
 		return result, fmt.Errorf("failed to get sort direction: %w", err)
+	}
+
+	token := p.peek()
+
+	if token.Type != TokenTypeEOF {
+		return result, fmt.Errorf("expected no tokens after sort clause")
 	}
 
 	result.Type = ASTTypeSort

@@ -3,3 +3,4 @@
 2026-06-01T08:02:00 WARN Memory usage high
 2026-06-01T08:03:00 INFO User logout
 2026-06-01T08:04:00 ERROR Payment processing failed
+2026-06-01T08:05:00 ERROR Database connection failed

@@ -2,6 +2,7 @@ package logen
 
 import (
 	"bufio"
+	"cmp"
 	"fmt"
 	"os"
 	"slices"
@@ -61,47 +62,36 @@ func ParseRawLogs(rawLogs []string) ([]Log, error) {
 	return result, nil
 }
 
-func ParseRawQuery(raw string) (Query, error) {
-	var result Query
-
-	parts := strings.SplitN(raw, "=", 2)
-
-	if len(parts) < 2 {
-		return result, fmt.Errorf("failed to parse query")
-	}
-
-	filters := make([]QueryFilter, 0)
-	filter := QueryFilter{
-		Field:    parts[0],
-		Operator: "=",
-		Value:    parts[1],
-	}
-
-	acceptedFields := []string{"timestamp", "level", "message"}
-
-	if !slices.Contains(acceptedFields, filter.Field) {
-		return result, fmt.Errorf("invalid field \"%s\" is given", filter.Field)
-	}
-
-	// TODO not working for a while because we use split by "="
-	// acceptedOperator := []string{"="}
-
-	// if !slices.Contains(acceptedOperator, filter.Operator) {
-	// 	return result, fmt.Errorf("invalid operator \"%s\" is given", filter.Field)
-	// }
-
-	filters = append(filters, filter)
-	result.Filters = filters
-
-	return result, nil
-}
-
-func QueryLogs(logs []Log, query Query) ([]Log, error) {
+func QueryLogs(logs []Log, rawQuery string) ([]Log, error) {
 	result := make([]Log, 0)
+	lexer := NewLexer(rawQuery)
+	tokens := make([]Token, 0)
+
+	for {
+		token, err := lexer.GetNextToken()
+
+		if err != nil {
+			return result, fmt.Errorf("failed to get next token: %w", err)
+		}
+
+		tokens = append(tokens, token)
+
+		if token.Type == TokenTypeEOF {
+			break
+		}
+	}
+
+	parser := NewParser(tokens)
+	query, err := parser.Parse()
+
+	if err != nil {
+		return result, fmt.Errorf("failed to parse tokens: %w", err)
+	}
 
 	for _, log := range logs {
-		for _, filter := range query.Filters {
-			// TODO filter timestamp
+		kept := true
+
+		for _, filter := range query.Filter.Items {
 			selectedField := ""
 
 			switch filter.Field {
@@ -111,10 +101,41 @@ func QueryLogs(logs []Log, query Query) ([]Log, error) {
 				selectedField = log.Message
 			}
 
-			if filter.Operator == "=" && selectedField == filter.Value {
-				result = append(result, log)
+			if filter.Operator == "=" && selectedField != filter.Value {
+				kept = false
 			}
 		}
+
+		if kept {
+			result = append(result, log)
+		}
+	}
+
+	if query.Sort.Field != "" {
+		slices.SortFunc(result, func(a, b Log) int {
+			switch query.Sort.Field {
+			case "level":
+				if query.Sort.Direction == "DESC" {
+					return cmp.Compare(b.Level, a.Level)
+				}
+
+				return cmp.Compare(a.Level, b.Level)
+			case "message":
+				if query.Sort.Direction == "DESC" {
+					return cmp.Compare(b.Message, a.Message)
+				}
+
+				return cmp.Compare(a.Message, b.Message)
+			case "timestamp":
+				if query.Sort.Direction == "DESC" {
+					return b.Timestamp.Compare(a.Timestamp)
+				}
+
+				return a.Timestamp.Compare(b.Timestamp)
+			}
+
+			return 0
+		})
 	}
 
 	return result, nil
@@ -145,14 +166,4 @@ type Log struct {
 	Timestamp time.Time
 	Level     string
 	Message   string
-}
-
-type Query struct {
-	Filters []QueryFilter
-}
-
-type QueryFilter struct {
-	Field    string
-	Operator string
-	Value    string
 }

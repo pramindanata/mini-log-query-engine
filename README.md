@@ -7,7 +7,8 @@ This project is a mini log query engine implemented in Golang. It allows you to 
 ## Todo
 
 - [x] Implement basic equal match operation
-- [ ] Implement sorting
+- [x] Implement sorting
+- [ ] Implement OR conditions
 - [ ] Implement contains match operation
 - [ ] Implement equal match by timestamp field
 - [ ] Implement gte & lte match by timestamp field
@@ -20,8 +21,8 @@ This project is a mini log query engine implemented in Golang. It allows you to 
 # Run the log query engine with a log file
 go run cmd/main.go logs.txt
 
-# Filter logs by level
-> level=ERROR
+# Apply query
+> level="ERROR" AND message="Database connection failed" sort timestamp desc
 
 #  Quit the engine
 > quit

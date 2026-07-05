@@ -47,14 +47,7 @@ func main() {
 			break
 		}
 
-		query, err := logen.ParseRawQuery(input)
-
-		if err != nil {
-			fmt.Printf("failed to handle user input: %s\n", err)
-			continue
-		}
-
-		result, err := logen.QueryLogs(logs, query)
+		result, err := logen.QueryLogs(logs, input)
 
 		if err != nil {
 			fmt.Printf("failed to query logs: %s\n", err)

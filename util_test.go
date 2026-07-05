@@ -55,79 +55,83 @@ func TestParseRawLogs(t *testing.T) {
 	})
 }
 
-func TestParseRawQuery(t *testing.T) {
-	t.Run("should handle basic equal query", func(t *testing.T) {
-		expected := logen.Query{
-			Filters: []logen.QueryFilter{
-				{
-					Field:    "level",
-					Operator: "=",
-					Value:    "ERROR",
-				},
-			},
-		}
-
-		result, err := logen.ParseRawQuery("level=ERROR")
-
-		assert.NoError(t, err)
-		assert.Equal(t, expected, result)
-	})
-
-	t.Run("should return error when invalid field is given", func(t *testing.T) {
-		_, err := logen.ParseRawQuery("invalid=something")
-
-		assert.EqualError(t, err, "invalid field \"invalid\" is given")
-	})
-}
-
-func TestQueryLog(t *testing.T) {
+func TestQueryLogs(t *testing.T) {
 	logs := []logen.Log{
 		{
-			Timestamp: time.Date(2026, 6, 1, 8, 0, 0, 0, time.UTC),
+			Timestamp: time.Date(2026, 6, 1, 1, 0, 0, 0, time.UTC),
 			Level:     "INFO",
 			Message:   "User login success",
 		},
 		{
-			Timestamp: time.Date(2026, 6, 1, 8, 1, 0, 0, time.UTC),
+			Timestamp: time.Date(2026, 6, 1, 2, 1, 0, 0, time.UTC),
+			Level:     "ERROR",
+			Message:   "Database connection failed",
+		},
+		{
+			Timestamp: time.Date(2026, 6, 1, 3, 0, 0, 0, time.UTC),
+			Level:     "WARN",
+			Message:   "Memory usage high",
+		},
+		{
+			Timestamp: time.Date(2026, 6, 1, 4, 0, 0, 0, time.UTC),
+			Level:     "INFO",
+			Message:   "User logout",
+		},
+		{
+			Timestamp: time.Date(2026, 6, 1, 5, 0, 0, 0, time.UTC),
+			Level:     "ERROR",
+			Message:   "Payment processing failed",
+		},
+		{
+			Timestamp: time.Date(2026, 6, 1, 6, 0, 0, 0, time.UTC),
 			Level:     "ERROR",
 			Message:   "Database connection failed",
 		},
 	}
 
 	t.Run("should return logs that equal match a level", func(t *testing.T) {
-		query := logen.Query{
-			Filters: []logen.QueryFilter{
-				{
-					Field:    "level",
-					Operator: "=",
-					Value:    "ERROR",
-				},
-			},
-		}
-
-		expected := []logen.Log{logs[1]}
-		result, err := logen.QueryLogs(logs, query)
+		query := "level=\"ERROR\""
+		actual, err := logen.QueryLogs(logs, query)
+		expected := []logen.Log{logs[1], logs[4], logs[5]}
 
 		assert.NoError(t, err)
-		assert.Equal(t, expected, result)
+		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("should return logs that equal match a message", func(t *testing.T) {
-		query := logen.Query{
-			Filters: []logen.QueryFilter{
-				{
-					Field:    "message",
-					Operator: "=",
-					Value:    "User login success",
-				},
-			},
-		}
-
+		query := "message=\"User login success\""
+		actual, err := logen.QueryLogs(logs, query)
 		expected := []logen.Log{logs[0]}
-		result, err := logen.QueryLogs(logs, query)
 
 		assert.NoError(t, err)
-		assert.Equal(t, expected, result)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("should return logs that equal match multiple AND filters", func(t *testing.T) {
+		query := "level=\"ERROR\" AND message=\"Database connection failed\""
+		actual, err := logen.QueryLogs(logs, query)
+		expected := []logen.Log{logs[1], logs[5]}
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("should sort logs based on the given sort", func(t *testing.T) {
+		query := "sort timestamp desc"
+		actual, err := logen.QueryLogs(logs, query)
+		expected := []logen.Log{logs[5], logs[4], logs[3], logs[2], logs[1], logs[0]}
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("should filter & sort logs", func(t *testing.T) {
+		query := "level=\"ERROR\" AND message=\"Database connection failed\" sort timestamp desc"
+		actual, err := logen.QueryLogs(logs, query)
+		expected := []logen.Log{logs[5], logs[1]}
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, actual)
 	})
 }
 
